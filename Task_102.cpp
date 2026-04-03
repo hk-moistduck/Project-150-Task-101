@@ -13,6 +13,7 @@ struct circle{
     float y;
     float radius;
 } circle;
+int last_frame_time = 0;
 
 int initialize_window(void){
     // initialize everything including video support, events etc
@@ -33,7 +34,7 @@ int initialize_window(void){
         fprintf(stderr, "Error creating SDL Window\n");
         return FALSE;
     }
-    // createe a SDL renderer for rendering graphics in the window
+    // create a SDL renderer for rendering graphics in the window
     renderer = SDL_CreateRenderer(window, -1, 0);
     if(!renderer){
         fprintf(stderr, "Error creating SDL Renderer\n");
@@ -47,7 +48,7 @@ void setup(){
     // define circle with center as the center of the window
     circle.x = WINDOW_WIDTH / 2;
     circle.y = WINDOW_HEIGHT / 2;
-    circle.radius = 50;
+    circle.radius = INITIAL_RADIUS;
 }
 
 void process_input(){
@@ -69,7 +70,21 @@ void process_input(){
 }
 
 void update(){
-    // no update for this task
+    // waste time to reach frame target time
+    int time_to_wait = FRAME_TARGET_TIME - (SDL_GetTicks64() - last_frame_time);
+    if(time_to_wait > 0 && time_to_wait <= FRAME_TARGET_TIME){
+        SDL_Delay(time_to_wait);
+    }
+    // use delta time to cap frame rate
+    float delta_time = (SDL_GetTicks64() - last_frame_time) / 1000.0f;
+    last_frame_time = SDL_GetTicks64();
+    // increase radius 50 pixels per second
+    circle.radius += 50 * delta_time;
+    if(circle.x + circle.radius >= WINDOW_WIDTH ||
+        circle.y + circle.radius >= WINDOW_HEIGHT){
+            // reset radius to initial value
+            circle.radius = INITIAL_RADIUS;
+    }
 }
 // draw circumference of the circle
 void draw_circle(){
