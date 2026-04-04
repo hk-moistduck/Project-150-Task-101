@@ -1,3 +1,4 @@
-# ignore .exe files and SDL2.dll
+# ignore .exe files and SDL2.dll and pikuma sdl tutorial folder
 *.exe
 *.dll
+pikuma_sdl_tutorial/
