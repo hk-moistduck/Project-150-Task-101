@@ -5,7 +5,7 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
-#define INITIAL_RADIUS 25
+#define INITIAL_RADIUS 50
 
 #define FPS 30
 #define FRAME_TARGET_TIME (1000 / FPS)

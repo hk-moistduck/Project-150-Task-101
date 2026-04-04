@@ -8,12 +8,19 @@
 int game_is_running = FALSE;
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
-struct circle{
+int last_frame_time = 0;
+
+typedef struct{
     float x;
     float y;
     float radius;
-} circle;
-int last_frame_time = 0;
+    float vel_x;
+    float vel_y;
+    SDL_Color color;
+} CIRCLE;
+
+CIRCLE circle_player, circle_npc;
+int is_colliding = FALSE;
 
 int initialize_window(void){
     // initialize everything including video support, events etc
@@ -21,10 +28,9 @@ int initialize_window(void){
         fprintf(stderr,"Error initializing SDL\n");
         return FALSE;
     }
-
     // create a SDL window
     window = SDL_CreateWindow(
-        "Task_102",
+        "Task_103",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         WINDOW_WIDTH,
@@ -35,7 +41,6 @@ int initialize_window(void){
         fprintf(stderr, "Error creating SDL Window\n");
         return FALSE;
     }
-
     // create a SDL renderer for rendering graphics in the window
     renderer = SDL_CreateRenderer(window, -1, 0);
     if(!renderer){
@@ -47,10 +52,21 @@ int initialize_window(void){
 }
 
 void setup(){
-    // initialize circle with center as the center of the window
-    circle.x = WINDOW_WIDTH / 2;
-    circle.y = WINDOW_HEIGHT / 2;
-    circle.radius = INITIAL_RADIUS;
+    // initialize circle that moves from left to right
+    circle_npc.x = 0;
+    circle_npc.y = WINDOW_HEIGHT / 2;
+    circle_npc.radius = 50;
+    circle_npc.vel_x = 100;
+    circle_npc.vel_y = 0;
+    circle_npc.color = {255, 255, 255, 255};
+
+    // initialize circle that is controlled by player
+    circle_player.x = WINDOW_WIDTH / 2;
+    circle_player.y = 0;
+    circle_player.radius = 40;
+    circle_player.vel_x = 0;
+    circle_player.vel_y = 0;
+    circle_player.color = {255, 255, 255, 255};
 }
 
 void process_input(){
@@ -73,6 +89,20 @@ void process_input(){
                 }
         }
     }
+
+    // use keyboard state for smoother movement
+    const Uint8* state = SDL_GetKeyboardState(NULL);
+    float speed = 200.0f;
+
+    // set velocity to 0 when no key is being pressed
+    circle_player.vel_x = 0;
+    circle_player.vel_y = 0;
+
+    // set velocity to the circle when key is pressed
+    if(state[SDL_SCANCODE_UP]) circle_player.vel_y = -speed;
+    if(state[SDL_SCANCODE_DOWN]) circle_player.vel_y = speed;
+    if(state[SDL_SCANCODE_LEFT]) circle_player.vel_x = -speed;
+    if(state[SDL_SCANCODE_RIGHT]) circle_player.vel_x = speed;
 }
 
 void update(){
@@ -86,19 +116,45 @@ void update(){
     float delta_time = (SDL_GetTicks64() - last_frame_time) / 1000.0f;
     last_frame_time = SDL_GetTicks64();
 
-    // increase radius 50 pixels per second
-    circle.radius += 50 * delta_time;
+    // move circle from left to right
+    circle_npc.x += circle_npc.vel_x * delta_time;
 
-    // check for collision with window borders
-    if(circle.x + circle.radius >= WINDOW_WIDTH ||
-        circle.y + circle.radius >= WINDOW_HEIGHT){
-
-            // reset radius to initial value
-            circle.radius = INITIAL_RADIUS;
+    // start over from left when circle passes right border
+    if(circle_npc.x - circle_npc.radius > WINDOW_WIDTH){
+            circle_npc.x = -circle_npc.radius;
     }
+
+    // move player controlled circle
+    circle_player.x += circle_player.vel_x * delta_time;
+    circle_player.y += circle_player.vel_y * delta_time;
+
+    // calculate distance between two circles
+    float dx = circle_npc.x - circle_player.x;
+    float dy = circle_npc.y - circle_player.y;
+    float distance_sqaured = (dx * dx) + (dy * dy);
+
+    // calculate sum of radius of two circes
+    float radius_sum = circle_npc.radius + circle_player.radius;
+
+    // check if collides
+    if(distance_sqaured < (radius_sum * radius_sum)){
+        is_colliding = TRUE;
+
+        // change color to red when colliding
+        circle_npc.color = (SDL_Color){255, 0, 0, 255};
+        circle_player.color = (SDL_Color){255, 0, 0, 255};
+    }
+    else{
+        is_colliding = FALSE;
+
+        // change color to white when not colliding
+        circle_npc.color = (SDL_Color){255, 255, 255, 255};
+        circle_player.color = (SDL_Color){255, 255, 255, 255};
+    }
+
 }
 // draw circumference of the circle
-void draw_circle(){
+void draw_circle(CIRCLE circle){
 
     // go around 360 degrees
     for(int degree = 0; degree <= 360; degree++){
@@ -111,12 +167,17 @@ void draw_circle(){
         float y = circle.y + circle.radius * sin(radian);
 
         // draw each point
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_SetRenderDrawColor(
+            renderer,
+            circle.color.r, 
+            circle.color.g, 
+            circle.color.b, 
+            circle.color.a);
         SDL_RenderDrawPoint(renderer, (int)round(x), (int)round(y)); // use round() for better accuracy in drawing correct points
     }
 }
 // draw inside circle
-void fill_circle(){
+void fill_circle(CIRCLE circle){
 
     // go from bottom to top
     for(int y = -circle.radius; y <= circle.radius; y++){
@@ -125,7 +186,12 @@ void fill_circle(){
         int x = sqrt(circle.radius * circle.radius - y * y);
 
         // draw each line
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_SetRenderDrawColor(
+            renderer,
+            circle.color.r,
+            circle.color.g,
+            circle.color.b,
+            circle.color.a);
         SDL_RenderDrawLine(
             renderer,
             circle.x - x, circle.y + y, // left point
@@ -139,8 +205,11 @@ void render(){
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
-    draw_circle();
-    fill_circle();
+    draw_circle(circle_npc);
+    fill_circle(circle_npc);
+
+    draw_circle(circle_player);
+    fill_circle(circle_player);
 
     // present the back buffer to the screen
     SDL_RenderPresent(renderer);
