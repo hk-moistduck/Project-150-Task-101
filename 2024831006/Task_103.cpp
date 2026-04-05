@@ -55,7 +55,7 @@ void setup(){
     // initialize circle that moves from left to right
     circle_npc.x = 0;
     circle_npc.y = WINDOW_HEIGHT / 2;
-    circle_npc.radius = 50;
+    circle_npc.radius = 80;
     circle_npc.vel_x = 100;
     circle_npc.vel_y = 0;
     circle_npc.color = {255, 255, 255, 255};
@@ -63,7 +63,7 @@ void setup(){
     // initialize circle that is controlled by player
     circle_player.x = WINDOW_WIDTH / 2;
     circle_player.y = 0;
-    circle_player.radius = 40;
+    circle_player.radius = 60;
     circle_player.vel_x = 0;
     circle_player.vel_y = 0;
     circle_player.color = {255, 255, 255, 255};
@@ -76,7 +76,7 @@ void process_input(){
     while(SDL_PollEvent(&event)){
         switch(event.type){
 
-            // exit game loop by pressing "X" on the window border
+            // exit game loop by clicking "X" on the window border
             case SDL_QUIT:
                 game_is_running = FALSE;
                 break;
@@ -106,13 +106,13 @@ void process_input(){
 }
 
 void update(){
-    // waste time to reach frame target time
+    // waste time to cap frame rate to set FPS
     int time_to_wait = FRAME_TARGET_TIME - (SDL_GetTicks64() - last_frame_time);
     if(time_to_wait > 0 && time_to_wait <= FRAME_TARGET_TIME){
         SDL_Delay(time_to_wait);
     }
 
-    // use delta time to cap frame rate
+    // use delta time for consistent movement
     float delta_time = (SDL_GetTicks64() - last_frame_time) / 1000.0f;
     last_frame_time = SDL_GetTicks64();
 
@@ -133,7 +133,7 @@ void update(){
     float dy = circle_npc.y - circle_player.y;
     float distance_sqaured = (dx * dx) + (dy * dy);
 
-    // calculate sum of radius of two circes
+    // calculate sum of radius of two circles
     float radius_sum = circle_npc.radius + circle_player.radius;
 
     // check if collides
@@ -153,30 +153,8 @@ void update(){
     }
 
 }
-// draw circumference of the circle
-void draw_circle(CIRCLE circle){
 
-    // go around 360 degrees
-    for(int degree = 0; degree <= 360; degree++){
-
-        // convert angles to radians
-        float radian = degree * (M_PI / 180.0);
-
-        // coordinates of the points on the circle at each individual angles
-        float x = circle.x + circle.radius * cos(radian);
-        float y = circle.y + circle.radius * sin(radian);
-
-        // draw each point
-        SDL_SetRenderDrawColor(
-            renderer,
-            circle.color.r, 
-            circle.color.g, 
-            circle.color.b, 
-            circle.color.a);
-        SDL_RenderDrawPoint(renderer, (int)round(x), (int)round(y)); // use round() for better accuracy in drawing correct points
-    }
-}
-// draw inside circle
+// draw filled circle
 void fill_circle(CIRCLE circle){
 
     // go from bottom to top
@@ -185,7 +163,7 @@ void fill_circle(CIRCLE circle){
         // find x for each y
         int x = sqrt(circle.radius * circle.radius - y * y);
 
-        // draw each line
+        // draw each horizontal line
         SDL_SetRenderDrawColor(
             renderer,
             circle.color.r,
@@ -205,10 +183,8 @@ void render(){
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
-    draw_circle(circle_npc);
+    // draw the two circles
     fill_circle(circle_npc);
-
-    draw_circle(circle_player);
     fill_circle(circle_player);
 
     // present the back buffer to the screen
